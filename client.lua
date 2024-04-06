@@ -18,17 +18,17 @@ function tell(commsName, ...)
     return table.unpack(comms.told[commsName]) 
 end
 
-RegisterNetEvent('peer:client:tell', function(n, d) 
-    comms.told[n] = d 
+RegisterNetEvent('peer:client:tell', function(commsName, data) 
+    comms.told[commsName] = data
 end)
 
-function listen(n, cb) 
-    comms.hear[n] = cb 
+function listen(commsName, cb) 
+    comms.hear[commsName] = cb 
 end
 
-RegisterNetEvent('peer:client:listen', function(n, ...) 
-    if comms.hear[n] then 
-        comms.hear[n](table.unpack({...}))
+RegisterNetEvent('peer:client:listen', function(commsName, ...) 
+    if comms.hear[commsName] then 
+        comms.hear[commsName](table.unpack({...}))
     end
 end)
 
@@ -54,8 +54,8 @@ peer = {
     end,
 
 
-    trigger = function (s, c, e, ...) 
-        local result = tell('peer:server:trigger', s, c, e, ...)
+    trigger = function (includeSelf, channels, eventName, ...) 
+        local result = tell('peer:server:trigger', includeSelf, channels, eventName, ...)
         if result then return end
     end,
 
@@ -66,100 +66,100 @@ peer = {
 
     get = function ()
         local data = {}
-        for k in pairs(peer.peers) do 
-            if k then 
-                data[k] = peer.peers[k]
+        for key in pairs(peer.peers) do 
+            if key then 
+                data[key] = peer.peers[key]
             end
         end
         return data 
     end,
 
-    setmetadata = function(k, v)
-        local result = tell('peer:server:setmetadata', k, v)
+    setmetadata = function(key, value)
+        local result = tell('peer:server:setmetadata', key, value)
         if result then return end
     end,
 
-    getmetadata = function(k, s)
+    getmetadata = function(key, serverId)
         if not peer.peers[tostring(GetPlayerServerId(PlayerId()))] then return end 
-        if not k then return end 
-        if s then 
-            if peer.peers[tostring(s)] and peer.peers[tostring(s)].metadata[k] then  
-                return peer.peers[tostring(s)].metadata[k]
+        if not key then return end 
+        if serverId then 
+            if peer.peers[tostring(serverId)] and peer.peers[tostring(serverId)].metadata[key] then  
+                return peer.peers[tostring(serverId)].metadata[key]
             end
         end
-        if not s then 
-            if peer.peers[tostring(GetPlayerServerId(PlayerId()))].metadata[k] then  
-                return peer.peers[tostring(GetPlayerServerId(PlayerId()))].metadata[k]
+        if not serverId then 
+            if peer.peers[tostring(GetPlayerServerId(PlayerId()))].metadata[key] then  
+                return peer.peers[tostring(GetPlayerServerId(PlayerId()))].metadata[key]
             end
         end
     end,
 
     channel = {
-        add = function(c)
-            local result = tell('peer:server:channel', 'add', c)
+        add = function(channelName)
+            local result = tell('peer:server:channel', 'add', channelName)
             if result then return end
         end,
-        remove = function(c)
-            if c == 'all' then return end 
-            local result = tell('peer:server:channel', 'remove', c)
+        remove = function(channelName)
+            if channelName == 'all' then return end 
+            local result = tell('peer:server:channel', 'remove', channelName)
             if result then return end
         end
     },
 
-    net = function(s, n, c, ...)
-        local result = tell('peer:server:net', s, n, c, ...)
+    net = function(includeSelf, commsId, channels, ...)
+        local result = tell('peer:server:net', includeSelf, commsId, channels, ...)
         if result then return end
     end,
 
-    direct = function(n, i, ...)
-        local result = tell('peer:server:direct', n, i, ...)
+    direct = function(commsId, serverId, ...)
+        local result = tell('peer:server:direct', commsId, serverId, ...)
         if result then return end
     end,
 
-    on = function(n, cb)
-        peer.nets[n] = cb
+    on = function(commsId, cb)
+        peer.nets[commsId] = cb
     end,
 
-    setdata = function(k, v)
-        local result = tell('peer:server:setdata', k, v)
+    setdata = function(key, value)
+        local result = tell('peer:server:setdata', key, value)
         if result then return end 
     end,
 
-    getdata = function(k)
+    getdata = function(key)
         if not peer.peers[tostring(GetPlayerServerId(PlayerId()))] then return end 
-        if peer.data[k] then 
-            return peer.data[k]
+        if peer.data[key] then 
+            return peer.data[key]
         end
     end
 
 }
 
-listen('peer:client:new', function(s, p, n, l)
-    peer.peers[tostring(s)] = {
-        entity = NetToPed(p),
+listen('peer:client:new', function(serverId, pedNetHandle, name, license)
+    peer.peers[tostring(serverId)] = {
+        entity = NetToPed(pedNetHandle),
         metadata = {},
-        id = s, 
-        name = n,
-        license = l
+        id = serverId, 
+        name = name,
+        license = license
     }
 end)
 
-listen('peer:client:setmetadata', function(s, k, v)
-    peer.peers[tostring(s)].metadata[k] = v
+listen('peer:client:setmetadata', function(serverId, key, value)
+    peer.peers[tostring(serverId)].metadata[key] = value
 end)
 
-listen('peer:client:drop', function(s)
-    peer.peers[tostring(s)] = nil
+listen('peer:client:drop', function(serverId)
+    peer.peers[tostring(serverId)] = nil
 end)
 
-listen('peer:client:on', function(n, ...)
-    if peer.nets[n] then 
-        peer.nets[n](table.unpack({...}))
+listen('peer:client:on', function(commsId, ...)
+    if peer.nets[commsId] then 
+        peer.nets[commsId](table.unpack({...}))
     end
 end)
 
-listen('peer:client:setdata', function(k, v)
-    peer.data[k] = v
+listen('peer:client:setdata', function(key, value)
+    peer.data[key] = value
 end)
 
 return peer
