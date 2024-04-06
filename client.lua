@@ -3,11 +3,19 @@ comms = {
     hear = {} 
 }
 
-function tell(n, ...) 
-    comms.told[n] = false  
-    TriggerServerEvent('peer:server:listen', n, table.unpack({...})) 
-    while not comms.told[n] do Citizen.Wait(0) end  
-    return table.unpack(comms.told[n]) 
+function tell(commsName, ...) 
+    comms.told[commsName] = false  
+    TriggerServerEvent('peer:server:listen', commsName, table.unpack({...})) 
+    local i = 0
+    while not comms.told[commsName] do 
+        Citizen.Wait(1) 
+        i += 1
+        if i > 500 then 
+            error("Could not receive data from the server", 2) 
+            return
+        end
+    end  
+    return table.unpack(comms.told[commsName]) 
 end
 
 RegisterNetEvent('peer:client:tell', function(n, d) 
